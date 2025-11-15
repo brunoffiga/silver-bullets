@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Teses & Alocação V.4.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #0a84ff;
+            --success: #30d158;
+            --danger: #ff453a;
+            --warning: #ff9f0a;
+            --dark: #121212;
+            --secondary-dark: #1c1c1e;
+            --tertiary-dark: #2c2c2e;
+            --text-light: #f5f5f7;
+            --text-secondary: #8e8e93;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --pod-selic: #0a84ff;
+            --pod-global: #30d158;
+            --pod-secular: #bf5af2;
+            --pod-na: #8e8e93;
+            --pod-sell: #ff453a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--dark);
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1800px;
+            margin: 20px auto;
+            padding: 25px;
+            background-color: var(--secondary-dark);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--tertiary-dark);
+        }
+
+        header h1 {
+            font-size: 2rem;
+            color: var(--text-light);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        nav {
+            display: flex;
+            background-color: var(--tertiary-dark);
+            border-radius: 14px;
+            margin-bottom: 30px;
+            padding: 6px;
+            gap: 6px;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 12px 20px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 10px;
+        }
+
+        .nav-tab:hover { background-color: rgba(255, 255, 255, 0.05); color: var(--text-light); }
+        .nav-tab.active { color: var(--text-light); background-color: var(--primary); }
+
+        .content-section { display: none; animation: fadeIn 0.3s ease; }
+        .content-section.active { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .filters-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            background-color: var(--tertiary-dark);
+            color: var(--text-light);
+            border: 2px solid var(--tertiary-dark);
+            border-radius: 10px;
+            padding: 11px 15px;
+            font-family: var(--font-family);
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .filter-group input[type="text"] { min-width: 260px; }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid var(--tertiary-dark);
+            border-radius: 14px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .data-table th, .data-table td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--tertiary-dark);
+            white-space: nowrap;
+        }
+
+        .data-table th {
+            background-color: var(--tertiary-dark);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .data-table th:hover { color: var(--text-light); }
+        
+        .data-table th.sort-asc::after,
+        .data-table th.sort-desc::after {
+            content: '';
+            display: inline-block;
+            margin-left: 8px;
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+        }
+        .data-table th.sort-asc::after { border-bottom: 5px solid var(--primary); }
+        .data-table th.sort-desc::after { border-top: 5px solid var(--primary); }
+
+        .data-table tr {
+            background-color: var(--secondary-dark);
+            transition: background-color 0.2s ease;
+        }
+        
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover { background-color: var(--tertiary-dark); }
+
+        .data-table td {
+            color: var(--text-light);
+            font-weight: 500;
+        }
+        
+        .cell-ticker {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 1.05rem;
+        }
+        
+        .cell-name {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 2px;
+        }
+
+        .cell-price, .cell-target { font-weight: 600; }
+        
+        .cell-multiple {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--success);
+        }
+        
+        .tag {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            text-align: center;
+            display: inline-block;
+            letter-spacing: 0.5px;
+        }
+        
+        .tag.rec-strong-buy, .tag.rec-buy { background-color: var(--success); color: var(--dark); }
+        .tag.rec-hold { background-color: var(--warning); color: var(--dark); }
+        .tag.rec-sell { background-color: var(--danger); color: var(--text-light); }
+        
+        .tag.pod-selic { background-color: var(--pod-selic); color: var(--text-light); }
+        .tag.pod-global { background-color: var(--pod-global); color: var(--dark); }
+        .tag.pod-secular { background-color: var(--pod-secular); color: var(--text-light); }
+        .tag.pod-na { background-color: var(--pod-na); color: var(--text-light); }
+        .tag.pod-sell { background-color: var(--pod-sell); color: var(--text-light); }
+        
+        .tag.source-v1 { background-color: #4a4a4d; color: #ccc; }
+        .tag.source-v2 { background-color: var(--primary); color: white; }
+        .tag.source-v1-v2 { background-color: var(--pod-secular); color: white; }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+        }
+        
+        .chart-card {
+            background-color: var(--secondary-dark);
+            padding: 28px;
+            border-radius: 16px;
+            border: 1px solid var(--tertiary-dark);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .chart-card.full-width { grid-column: 1 / -1; }
+
+        .chart-card h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+        
+        .chart-card .chart-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 25px;
+        }
+        
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 380px;
+        }
+        
+        .chart-card.full-width .chart-container { height: 450px; }
+
+        /* NOVO: Estilo dos Cards de Estratégia */
+        .strategy-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+        
+        .strategy-card {
+            background-color: var(--tertiary-dark);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--tertiary-dark);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .strategy-card .header {
+            padding: 20px 24px;
+            border-bottom: 2px solid var(--tertiary-dark);
+        }
+        .strategy-card .header.selic { border-left: 6px solid var(--pod-selic); }
+        .strategy-card .header.global { border-left: 6px solid var(--pod-global); }
+        .strategy-card .header.secular { border-left: 6px solid var(--pod-secular); }
+        .strategy-card .header.exit { border-left: 6px solid var(--warning); }
+        .strategy-card .header.exit-fail { border-left: 6px solid var(--danger); }
+        
+        .strategy-card h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .strategy-card .header.selic h3 { color: var(--pod-selic); }
+        .strategy-card .header.global h3 { color: var(--pod-global); }
+        .strategy-card .header.secular h3 { color: var(--pod-secular); }
+        .strategy-card .header.exit h3 { color: var(--warning); }
+        .strategy-card .header.exit-fail h3 { color: var(--danger); }
+        
+        .strategy-card .header p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        
+        .strategy-card .content {
+            padding: 24px;
+            background-color: var(--secondary-dark);
+            flex-grow: 1;
+        }
+
+        .strategy-card h4 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+        .strategy-card .buy h4 { color: var(--success); }
+        .strategy-card .sell h4 { color: var(--danger); }
+        
+        .strategy-card ul {
+            list-style: none;
+            padding-left: 0;
+            margin-bottom: 20px;
+        }
+        
+        .strategy-card li {
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+            line-height: 1.5;
+        }
+        
+        .strategy-card li::before {
+            content: '►';
+            font-size: 0.7rem;
+            margin-right: 12px;
+            margin-top: 6px;
+        }
+        .strategy-card .buy li::before { color: var(--success); }
+        .strategy-card .sell li::before { color: var(--danger); }
+        .strategy-card .header.exit li::before { color: var(--warning); }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: var(--font-family);
+        }
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-primary:hover { background-color: #0070e0; transform: translateY(-1px); }
+        .btn-secondary { background-color: var(--tertiary-dark); color: var(--text-light); }
+        .btn-secondary:hover { background-color: #3a3a3c; }
+
+        .simulator-input-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr; /* Mais espaço para o valor */
+            gap: 20px;
+            background: var(--tertiary-dark);
+            padding: 30px;
+            border-radius: 14px;
+            margin-bottom: 25px;
+            align-items: flex-end;
+        }
+
+        .result-summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            background: var(--tertiary-dark);
+            padding: 25px;
+            border-radius: 14px;
+            margin-bottom: 25px;
+        }
+        .result-item { text-align: center; }
+        .result-label {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .result-value { font-size: 1.8rem; font-weight: 700; }
+
+        .stock-selector {
+            background: var(--tertiary-dark);
+            padding: 25px;
+            border-radius: 14px;
+            margin-bottom: 25px;
+        }
+        .stock-selector h3 {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: var(--text-light);
+        }
+        .stock-chips-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .stock-chip {
+            background: var(--secondary-dark);
+            border: 2px solid var(--tertiary-dark);
+            padding: 10px 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            user-select: none;
+        }
+        .stock-chip:hover {
+            border-color: var(--primary);
+            background: var(--tertiary-dark);
+        }
+        .stock-chip.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        .stock-chip.disabled {
+            background: var(--secondary-dark);
+            border-color: var(--tertiary-dark);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+            opacity: 0.5;
+            text-decoration: line-through;
+        }
+        .stock-chip-badge {
+            background: rgba(47, 22, 22, 0.2);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .stock-chip.selected .stock-chip-badge {
+  /* fundo suave sobre o chip selecionado */
+  background-color: rgba(255, 255, 255, 0.18) !important;
+  /* garante legibilidade independente da cor inline definida pelo JS */
+  color: var(--text-light) !important;
+  font-weight: 800;
+  opacity: 1 !important;
+  -webkit-text-fill-color: unset !important; /* protege em alguns browsers */
+}
+        .stock-chip.disabled .stock-chip-badge {
+             background: rgba(100, 100, 100, 0.2);
+        }
+
+        .simulation-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-top: 25px;
+        }
+
+        @media (max-width: 1200px) {
+            .simulation-layout { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 900px) {
+            .charts-grid { grid-template-columns: 1fr; }
+            .result-summary { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 600px) {
+            .simulator-input-grid { grid-template-columns: 1fr; }
+            .result-summary { grid-template-columns: 1fr; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Dashboard de Teses & Alocação</h1>
+        </header>
+
+        <nav>
+            <div class="nav-tab active" data-view="dashboard-view">Dashboard</div>
+            <div class="nav-tab" data-view="strategy-view">Teses & Estratégia</div>
+            <div class="nav-tab" data-view="charts-view">Análise Gráfica</div>
+            <div class="nav-tab" data-view="simulator-view">Simulador de Aportes</div>
+        </nav>
+
+        <main>
+            <section id="dashboard-view" class="content-section active">
+                <div class="filters-container">
+                    <div class="filter-group">
+                        <label>Buscar Ticker</label>
+                        <input type="text" id="search-input" placeholder="Ex: SUZB3, WEGE3...">
+                    </div>
+                    <div class="filter-group">
+                        <label>Filtrar por Tese (Pod)</label>
+                        <select id="pod-filter">
+                            <option value="all">Todos os Pods</option>
+                            <option value="Pod Secular">Pod Secular (Startup)</option>
+                            <option value="Pod Global">Pod Global (Commodity)</option>
+                            <option value="Pod Selic">Pod Selic (Risco-Brasil)</option>
+                            <option value="Pod Sell">Evitar (Venda)</option>
+                            <option value="Pod N/A">N/A (Radar Antigo)</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Filtrar por Origem</label>
+                        <select id="source-filter">
+                            <option value="all">Todas as Fontes</option>
+                            <option value="V2">Novas (V2)</option>
+                            <option value="V1+V2">Atualizadas (V1+V2)</option>
+                            <option value="V1">Radar Antigo (V1)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="ticker">Ticker</th>
+                                <th data-sort="pod">Tese (Pod)</th>
+                                <th data-sort="currentPrice">Preço Atual</th>
+                                <th data-sort="targetPrice">Alvo (Consenso)</th>
+                                <th data-sort="growthMultiple">Múltiplo (Cresc.)</th>
+                                <th data-sort="recommendation">Recomendação</th>
+                                <th data-sort="source">Fonte</th>
+                            </tr>
+                        </thead>
+                        <tbody id="data-table-body">
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="strategy-view" class="content-section">
+                <div class="chart-card full-width" style="margin-bottom: 25px;">
+                    <h2>Playbook de Entrada e Saída (Gatilhos)</h2>
+                    <div class="chart-subtitle">O racional de investimento para cada Pod, unindo gatilhos de compra e venda.</div>
+                    <div class="strategy-container">
+                        
+                        <div class="strategy-card">
+                            <div class="header secular">
+                                <h3>Pod Secular (Startup)</h3>
+                                <p>Tese de crescimento de longo prazo, independente do macro. Foco na execução.</p>
+                            </div>
+                            <div class="content">
+                                <div class="buy">
+                                    <h4>Gatilhos de Entrada (Comprar Mais)</h4>
+                                    <ul>
+                                        <li><strong>WEGE3:</strong> Reportar crescimento de receita acima de 15% a.a.</li>
+                                        <li><strong>TOTS3:</strong> Reportar aceleração do SaaS (Receita Recorrente).</li>
+                                        <li><strong>SMFT3:</strong> Anunciar M&A estratégico ou expansão acima do *guidance*.</li>
+                                    </ul>
+                                </div>
+                                <div class="sell">
+                                    <h4>Gatilhos de Saída (Venda Total)</h4>
+                                    <ul>
+                                        <li>Reportar 2 trimestres consecutivos com crescimento de receita *abaixo* da inflação.</li>
+                                        <li>Perda de *market share* para um novo concorrente (quebra do *moat*).</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <div class="header global">
+                                <h3>Pod Global (Commodity)</h3>
+                                <p>Tese descorrelacionada da Selic, atrelada ao Dólar e ao preço da commodity.</p>
+                            </div>
+                            <div class="content">
+                                <div class="buy">
+                                    <h4>Gatilhos de Entrada (Comprar Mais)</h4>
+                                    <ul>
+                                        <li><strong>SUZB3:</strong> Virada (aumento) no preço da Celulose (Pulp) na China/Europa.</li>
+                                        <li><strong>TTEN3:</strong> Preço da Soja (Contratos Futuros) subir acima do esperado.</li>
+                                        <li><strong>PETR4:</strong> Preço do Petróleo (Brent) em alta OU anúncio de dividendos acima do consenso.</li>
+                                    </ul>
+                                </div>
+                                <div class="sell">
+                                    <h4>Gatilhos de Saída (Venda Total)</h4>
+                                    <ul>
+                                        <li>Commodity (Celulose/Soja/Petróleo) entrar em *bear market* estrutural (novas mínimas).</li>
+                                        <li>Mudança drástica na política de dividendos (ex: corte de 80% no *payout* da PETR4).</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="strategy-card">
+                            <div class="header selic">
+                                <h3>Pod Selic (Risco-Brasil)</h3>
+                                <p>Tese de "virada macro". Ações mais sensíveis à queda de juros (Selic).</p>
+                            </div>
+                            <div class="content">
+                                <div class="buy">
+                                    <h4>Gatilhos de Entrada (Comprar Mais)</h4>
+                                    <ul>
+                                        <li>IPCA (Inflação) reportado abaixo da meta.</li>
+                                        <li>Ata do COPOM sinalizando cortes da Selic *antes* do esperado (2026).</li>
+                                        <li>Aprovação de novas fases do programa MCMV (para Construtoras).</li>
+                                    </ul>
+                                </div>
+                                <div class="sell">
+                                    <h4>Gatilhos de Saída (Venda Total)</h4>
+                                    <ul>
+                                        <li>IPCA volta a subir, ficando fora de controle (ex: 2 meses seguidos acima da meta).</li>
+                                        <li>COPOM sinaliza um *novo ciclo de alta* da Selic.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <div class="header exit">
+                                <h3>Cenário 1: Tese Concluída</h3>
+                                <p>O *upside* foi capturado. O ativo não está mais subprecificado.</p>
+                            </div>
+                            <div class="content">
+                                <h4>Gatilho de Saída (Venda Parcial)</h4>
+                                <ul>
+                                    <li>Preço Atual da Ação ≥ Preço-Alvo (Consenso).</li>
+                                    <li>Múltiplo de Crescimento se aproxima de 1.0x.</li>
+                                </ul>
+                                <h4>Ação Recomendada</h4>
+                                <ul>
+                                    <li>Vender 30% a 50% da posição para realizar lucro.</li>
+                                    <li>Realocar o "caixa" (lucro) na ação com o maior Múltiplo de Crescimento *atual* do portfólio.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <div class="header exit">
+                                <h3>Cenário 2: Custo de Oportunidade</h3>
+                                <p>Uma tese "morna" está "prendendo" capital que poderia estar em uma tese superior.</p>
+                            </div>
+                            <div class="content">
+                                <h4>Gatilho de Saída (Rotação)</h4>
+                                <ul>
+                                    <li>Ativo A (ex: B3SA3) está com Múltiplo baixo (ex: 1.18x).</li>
+                                    <li>Uma nova "Silver Bullet" (Ativo B) é descoberta com Múltiplo muito superior (ex: 2.0x+).</li>
+                                </ul>
+                                <h4>Ação Recomendada</h4>
+                                <ul>
+                                    <li>Vender 100% do Ativo A (tese "morna").</li>
+                                    <li>Realocar 100% do capital no Ativo B (tese de *upside* máximo).</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <div class="header exit-fail">
+                                <h3>Cenário 3: Tese Quebrada</h3>
+                                <p>O motivo fundamental da compra se provou falso. Não é mais um investimento, é "torcida".</p>
+                            </div>
+                            <div class="content">
+                                <h4>Gatilho de Saída (Venda Total)</h4>
+                                <ul>
+                                    <li>O gatilho de *Entrada* se inverteu (ex: Preço da celulose fez nova mínima).</li>
+                                    <li>Empresa reporta 2 trimestres de crescimento abaixo da inflação (quebra tese Secular).</li>
+                                </ul>
+                                <h4>Ação Recomendada</h4>
+                                <ul>
+                                    <li>Vender 100% da posição IMEDIATAMENTE.</li>
+                                    <li>Preservar o capital restante e realocar em teses válidas.</li>
+                                    <li>Ex: Vender `AMBP3` (em RJ), `BRKM5` (queima de caixa).</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            <section id="charts-view" class="content-section">
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h2>Top 8 Múltiplos de Crescimento</h2>
+                        <div class="chart-subtitle">Ações com maior potencial de upside (Alvo/Atual).</div>
+                        <div class="chart-container">
+                            <canvas id="topMultipleChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <h2>Múltiplo Médio por Pod</h2>
+                        <div class="chart-subtitle">Potencial de crescimento médio de cada estratégia.</div>
+                        <div class="chart-container">
+                            <canvas id="podMultipleChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <h2>Alocação Recomendada (Agressiva)</h2>
+                        <div class="chart-subtitle">Foco nos maiores múltiplos e teses descorrelacionadas.</div>
+                        <div class="chart-container">
+                            <canvas id="allocationChart"></canvas>
+                        </div>
+                    </div>
+                    
+                </div>
+            </section>
+            
+            <section id="simulator-view" class="content-section">
+                <div class="chart-card full-width">
+                    <h2>Simulador de Aportes (DCA Otimizado)</h2>
+                    <div class="chart-subtitle">Selecione as ações e o aporte para calcular a alocação ideal e projetar seu patrimônio.</div>
+                    
+                    <div class="stock-selector">
+                        <h3>1. Selecione as Ações para Simulação (Ativos-Alvo)</h3>
+                        <div class="stock-chips-container" id="stock-chips">
+                            </div>
+                    </div>
+
+                    <div class="simulator-input-grid">
+                        <div class="filter-group">
+                            <label>Valor do Aporte Mensal (R$)</label>
+                            <input type="number" id="monthly-input" placeholder="Ex: 2500" value="2500" style="font-size: 1.2rem; font-weight: 700; padding: 14px;">
+                        </div>
+                        <div class="filter-group">
+                            <label>Estratégia de Alocação</label>
+                            <select id="allocation-strategy" style="font-size: 1.05rem; padding: 14px;">
+                                <option value="aggressive">Agressiva (Ponderada por Múltiplo)</option>
+                                <option value="balanced">Balanceada (Ponderada por Pod)</option>
+                                <option value="conservative">Conservadora (Peso Igual)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="allocation-results" style="display: none; margin-top: 30px;">
+                        <h3 style="font-size: 1.3rem; margin-bottom: 20px; color: var(--primary);">Resultados da Simulação</h3>
+                        
+                        <div id="allocation-summary" class="result-summary">
+                            </div>
+                        
+                        <div class="simulation-layout">
+                            <div id="allocation-table-container">
+                                </div>
+                            <div class="chart-card" style="background-color: var(--tertiary-dark);">
+                                <h2 style="font-size: 1.1rem; margin-bottom: 15px;">Gráfico da Alocação (R$)</h2>
+                                <div class="chart-container" style="height: 300px;">
+                                    <canvas id="allocationPieChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="chart-card full-width" style="margin-top: 25px; background-color: var(--tertiary-dark);">
+                            <h2>Projeção de Patrimônio (12 meses)</h2>
+                            <div class="chart-subtitle">Crescimento estimado com base na sua simulação vs. alocação padrão.</div>
+                            <div class="chart-container" style="height: 400px;">
+                                <canvas id="wealthProjectionChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+        </main>
+    </div>
+
+    <script>
+        // ========================================================================
+        // DATABASE (SINGLE SOURCE OF TRUTH)
+        // ========================================================================
+        const COMPANIES_DATABASE = [
+            // ==================== POD SECULAR (STARTUP METHOD) ====================
+            {
+                ticker: "WEGE3", name: "WEG", sector: "Bens de Capital", pod: "Pod Secular",
+                currentPrice: 36.16, targetPrice: 64.00, recommendation: "BUY", source: "V2",
+                metrics: { roe: 30.5, netDebtToEbitda: -0.5, ebitdaMargin: 20.1 }
+            },
+            {
+                ticker: "TOTS3", name: "Totvs", sector: "Tecnologia", pod: "Pod Secular",
+                currentPrice: 43.57, targetPrice: 55.00, recommendation: "BUY", source: "V2",
+                metrics: { roe: 18.2, netDebtToEbitda: 1.1, ebitdaMargin: 25.0 }
+            },
+            {
+                ticker: "SMFT3", name: "Smart Fit", sector: "Varejo", pod: "Pod Secular",
+                currentPrice: 25.83, targetPrice: 31.00, recommendation: "BUY", source: "V1+V2",
+                metrics: { roe: 22.0, netDebtToEbitda: 2.5, ebitdaMargin: 28.5 }
+            },
+
+            // ==================== POD GLOBAL (COMMODITY/DÓLAR) ====================
+            {
+                ticker: "SUZB3", name: "Suzano", sector: "Papel e Celulose", pod: "Pod Global",
+                currentPrice: 48.55, targetPrice: 92.00, recommendation: "STRONG BUY", source: "V2",
+                metrics: { roe: 15.8, netDebtToEbitda: 2.8, ebitdaMargin: 45.0 }
+            },
+            {
+                ticker: "TTEN3", name: "3tentos", sector: "Agronegócio", pod: "Pod Global",
+                currentPrice: 13.45, targetPrice: 20.00, recommendation: "STRONG BUY", source: "V2",
+                metrics: { roe: 24.1, netDebtToEbitda: 1.9, ebitdaMargin: 12.3 }
+            },
+            {
+                ticker: "PETR4", name: "Petrobras", sector: "Petróleo e Gás", pod: "Pod Global",
+                currentPrice: 31.76, targetPrice: 37.50, recommendation: "BUY", source: "V2",
+                metrics: { roe: 35.7, netDebtToEbitda: 0.8, ebitdaMargin: 48.2 }
+            },
+
+            // ==================== POD SELIC (RISCO-BRASIL) ====================
+            {
+                ticker: "CURY3", name: "Cury", sector: "Construção Civil", pod: "Pod Selic",
+                currentPrice: 33.80, targetPrice: 41.38, recommendation: "STRONG BUY", source: "V2",
+                metrics: { roe: 66.0, netDebtToEbitda: -0.2, ebitdaMargin: 43.0 }
+            },
+            {
+                ticker: "PLPL3", name: "Plano & Plano", sector: "Construção Civil", pod: "Pod Selic",
+                currentPrice: 17.20, targetPrice: 20.75, recommendation: "STRONG BUY", source: "V1+V2",
+                metrics: { roe: 49.0, netDebtToEbitda: 0.2, ebitdaMargin: 17.9 }
+            },
+            {
+                ticker: "DIRR3", name: "Direcional", sector: "Construção Civil", pod: "Pod Selic",
+                currentPrice: 15.30, targetPrice: 18.29, recommendation: "BUY", source: "V1+V2",
+                metrics: { roe: 21.0, netDebtToEbitda: 0.1, ebitdaMargin: 20.7 }
+            },
+            {
+                ticker: "IGTI11", name: "Iguatemi", sector: "Shoppings", pod: "Pod Selic",
+                currentPrice: 24.46, targetPrice: 29.17, recommendation: "BUY", source: "V2",
+                metrics: { roe: 8.5, netDebtToEbitda: 3.5, ebitdaMargin: 70.1 }
+            },
+            {
+                ticker: "B3SA3", name: "B3", sector: "Serviços Financeiros", pod: "Pod Selic",
+                currentPrice: 15.67, targetPrice: 18.50, recommendation: "BUY", source: "V2",
+                metrics: { roe: 20.2, netDebtToEbitda: 1.5, ebitdaMargin: 72.0 }
+            },
+            
+            // ==================== POD SELL (EVITAR) ====================
+            {
+                ticker: "AMBP3", name: "Ambipar", sector: "Serviços", pod: "Pod Sell",
+                currentPrice: 0.38, targetPrice: 0.0, recommendation: "SELL", source: "V1",
+                metrics: { roe: -15.0, netDebtToEbitda: 5.8, ebitdaMargin: 10.1 }
+            },
+            {
+                ticker: "BRKM5", name: "Braskem", sector: "Químicos", pod: "Pod Sell",
+                currentPrice: 6.50, targetPrice: 8.00, recommendation: "SELL", source: "V1",
+                metrics: { roe: -20.0, netDebtToEbitda: 7.2, ebitdaMargin: 5.3 }
+            },
+            {
+                ticker: "RAIZ4", name: "Raízen", sector: "Energia", pod: "Pod Sell",
+                currentPrice: 2.80, targetPrice: 2.50, recommendation: "SELL", source: "V1",
+                metrics: { roe: 3.1, netDebtToEbitda: 4.1, ebitdaMargin: 8.0 }
+            },
+
+            // ==================== POD N/A (RADAR ANTIGO) ====================
+            {
+                ticker: "ONCO3", name: "Oncoclínicas", sector: "Saúde", pod: "Pod N/A",
+                currentPrice: 8.12, targetPrice: 12.50, recommendation: "HOLD", source: "V1",
+                metrics: { roe: -32.0, netDebtToEbitda: 4.1, ebitdaMargin: 15.6 }
+            },
+            {
+                ticker: "CASH3", name: "Méliuz", sector: "Tecnologia", pod: "Pod N/A",
+                currentPrice: 5.50, targetPrice: 7.00, recommendation: "HOLD", source: "V1",
+                metrics: { roe: -10.5, netDebtToEbitda: -1.0, ebitdaMargin: -5.0 }
+            }
+        ];
+
+        // Processa os dados brutos, calculando o Múltiplo de Crescimento
+        const PROCESSED_DATA = COMPANIES_DATABASE.map(function(company) {
+            return {
+                ...company,
+                growthMultiple: (company.targetPrice && company.currentPrice > 0) 
+                    ? (company.targetPrice / company.currentPrice) 
+                    : 0,
+                upsidePercent: (company.targetPrice && company.currentPrice > 0)
+                    ? ((company.targetPrice / company.currentPrice) - 1) * 100
+                    : 0,
+                metrics: company.metrics || {}
+            };
+        });
+
+        // ========================================================================
+        // VARIÁVEIS DE ESTADO GLOBAL
+        // ========================================================================
+        var companiesData = [];
+        var allCharts = {};
+        var currentSort = { field: 'growthMultiple', direction: 'desc' };
+        var currentFilters = { search: '', pod: 'all', source: 'all' };
+        var simulationSelectedTickers = new Set();
+
+        // ========================================================================
+        // INICIALIZAÇÃO (MAIN)
+        // ========================================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("DOM Carregado. Iniciando Silver Bullet ...");
+            loadData();
+            setupNavigation();
+            setupFilters();
+            
+            renderTable();
+            createAllCharts();
+            setupSimulator();
+            analyzeAndDisplaySectors();
+            
+            console.log("Aplicação iniciada com sucesso.");
+        });
+
+        // ========================================================================
+        // FUNÇÕES DE CARGA E NAVEGAÇÃO
+        // ========================================================================
+        function loadData() {
+            companiesData = PROCESSED_DATA.slice();
+            // Pré-seleciona as ações da tese principal ("Silver Bullets") para o simulador
+            COMPANIES_DATABASE.filter(c => c.pod.startsWith('Pod S')).forEach(c => simulationSelectedTickers.add(c.ticker));
+            console.log('Dados processados: ' + companiesData.length + ' empresas carregadas.');
+        }
+
+        function setupNavigation() {
+            var tabs = document.querySelectorAll('.nav-tab');
+            var views = document.querySelectorAll('.content-section');
+            
+            tabs.forEach(function(tab) {
+                tab.addEventListener('click', function() {
+                    var viewId = tab.dataset.view;
+                    
+                    tabs.forEach(function(t) { t.classList.remove('active'); });
+                    tab.classList.add('active');
+                    
+                    views.forEach(function(v) {
+                        v.style.display = 'none'; // Garante que todos estão ocultos
+                        v.classList.remove('active');
+                    });
+                    
+                    var activeView = document.getElementById(viewId);
+                    if (activeView) {
+                        activeView.style.display = 'block';
+                        activeView.classList.add('active');
+                    }
+                });
+            });
+            // Ativa a primeira aba por padrão
+            document.querySelector('.nav-tab[data-view="dashboard-view"]').click();
+        }
+
+        // ========================================================================
+        // FUNÇÕES DO DASHBOARD (FILTRO E TABELA)
+        // ========================================================================
+        function setupFilters() {
+            document.getElementById('search-input').addEventListener('input', function(e) {
+                currentFilters.search = e.target.value.toLowerCase();
+                renderTable();
+            });
+            document.getElementById('pod-filter').addEventListener('change', function(e) {
+                currentFilters.pod = e.target.value;
+                renderTable();
+            });
+            document.getElementById('source-filter').addEventListener('change', function(e) {
+                currentFilters.source = e.target.value;
+                renderTable();
+            });
+            
+            document.querySelectorAll('.data-table th[data-sort]').forEach(function(th) {
+                th.addEventListener('click', function() {
+                    var field = th.dataset.sort;
+                    var direction = 'desc';
+                    if (currentSort.field === field && currentSort.direction === 'desc') {
+                        direction = 'asc';
+                    }
+                    currentSort = { field: field, direction: direction };
+                    
+                    document.querySelectorAll('.data-table th[data-sort]').forEach(function(t) {
+                        t.classList.remove('sort-asc', 'sort-desc');
+                    });
+                    th.classList.add('sort-' + direction);
+                    
+                    renderTable();
+                });
+            });
+            // Seta o sorting inicial
+             document.querySelector('th[data-sort="growthMultiple"]').classList.add('sort-desc');
+        }
+
+        function getFilteredData() {
+            var data = companiesData.slice();
+            
+            if (currentFilters.search) {
+                data = data.filter(function(c) {
+                    return c.ticker.toLowerCase().includes(currentFilters.search) ||
+                           c.name.toLowerCase().includes(currentFilters.search);
+                });
+            }
+            
+            if (currentFilters.pod !== 'all') {
+                data = data.filter(function(c) {
+                    return c.pod === currentFilters.pod;
+                });
+            }
+            
+            if (currentFilters.source !== 'all') {
+                data = data.filter(function(c) {
+                    return c.source === currentFilters.source;
+                });
+            }
+            
+            return data;
+        }
+
+        function renderTable() {
+            var tbody = document.getElementById('data-table-body');
+            if (!tbody) {
+                console.error("Elemento 'data-table-body' não encontrado.");
+                return;
+            }
+            
+            var dataToRender = getFilteredData();
+            
+            dataToRender.sort(function(a, b) {
+                var valA = getNestedProperty(a, currentSort.field);
+                var valB = getNestedProperty(b, currentSort.field);
+                
+                if (valA === null || valA === undefined) valA = 0;
+                if (valB === null || valB === undefined) valB = 0;
+                
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+
+                if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            tbody.innerHTML = dataToRender.map(function(company) {
+                var recClass = getRecommendationClass(company.recommendation);
+                var podClass = getPodClass(company.pod);
+                var sourceClass = getSourceClass(company.source);
+
+                return '<tr>' +
+                    '<td>' +
+                        '<div class="cell-ticker">' + company.ticker + '</div>' +
+                        '<div class="cell-name">' + company.name + '</div>' +
+                    '</td>' +
+                    '<td><span class="tag ' + podClass + '">' + company.pod + '</span></td>' +
+                    '<td class="cell-price">' + formatCurrency(company.currentPrice) + '</td>' +
+                    '<td class="cell-target">' + formatCurrency(company.targetPrice) + '</td>' +
+                    '<td class="cell-multiple">' + formatMultiple(company.growthMultiple) + '</td>' +
+                    '<td><span class="tag ' + recClass + '">' + (company.recommendation || 'N/A') + '</span></td>' +
+                    '<td><span class="tag ' + sourceClass + '">' + company.source + '</span></td>' +
+                '</tr>';
+            }).join('');
+        }
+        
+        // ========================================================================
+        // FUNÇÕES DOS GRÁFICOS (CHARTS-VIEW)
+        // ========================================================================
+        function createChart(canvasId, config) {
+            if (allCharts[canvasId]) {
+                allCharts[canvasId].destroy();
+            }
+            var ctx = document.getElementById(canvasId);
+            if (ctx) {
+                // Seta a cor da fonte padrão para os gráficos
+                Chart.defaults.color = 'rgba(245, 245, 247, 0.7)';
+                Chart.defaults.borderColor = 'rgba(44, 44, 46, 0.5)';
+                allCharts[canvasId] = new Chart(ctx.getContext('2d'), config);
+            } else {
+                console.error('Canvas com id "' + canvasId + '" não encontrado.');
+            }
+        }
+        
+        function createAllCharts() {
+            console.log("Criando todos os gráficos...");
+            createTopMultipleChart();
+            createPodMultipleChart();
+            createAllocationChart();
+            createSectorChart();
+            
+            // Inicia o gráfico de projeção com o estado padrão (sem simulação)
+            createWealthProjectionChart(null); 
+        }
+        
+        function createTopMultipleChart() {
+            var top8 = companiesData.slice()
+                .filter(c => (c.pod !== 'Pod Sell' && c.pod !== 'Pod N/A' && c.growthMultiple > 0))
+                .sort((a, b) => b.growthMultiple - a.growthMultiple)
+                .slice(0, 8)
+                .reverse(); // Inverte para o bar horizontal
+
+            createChart('topMultipleChart', {
+                type: 'bar',
+                data: {
+                    labels: top8.map(c => c.ticker),
+                    datasets: [{
+                        label: 'Múltiplo de Crescimento (x)',
+                        data: top8.map(c => c.growthMultiple),
+                        backgroundColor: top8.map(c => getPodColor(c.pod, 0.8)),
+                        borderColor: top8.map(c => getPodColor(c.pod, 1)),
+                        borderWidth: 2,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        x: { beginAtZero: true, title: { display: true, text: 'Múltiplo (x)', color: '#f5f5f7' } },
+                        y: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ' Múltiplo: ' + formatMultiple(ctx.raw) } } }
+                }
+            });
+        }
+        
+        function createPodMultipleChart() {
+            var pods = ['Pod Secular', 'Pod Global', 'Pod Selic'];
+            var podData = pods.map(function(podName) {
+                var podCompanies = companiesData.filter(c => (c.pod === podName && c.growthMultiple > 0));
+                var avgMultiple = podCompanies.reduce((sum, c) => sum + c.growthMultiple, 0) / (podCompanies.length || 1);
+                return avgMultiple;
+            });
+            
+            createChart('podMultipleChart', {
+                type: 'bar',
+                data: {
+                    labels: pods.map(p => p.replace('Pod ', '')),
+                    datasets: [{
+                        label: 'Múltiplo Médio (x)',
+                        data: podData,
+                        backgroundColor: [getPodColor('Pod Secular', 0.8), getPodColor('Pod Global', 0.8), getPodColor('Pod Selic', 0.8)],
+                        borderColor: [getPodColor('Pod Secular', 1), getPodColor('Pod Global', 1), getPodColor('Pod Selic', 1)],
+                        borderWidth: 2,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, title: { display: true, text: 'Múltiplo Médio (x)', color: '#f5f5f7' } }, x: { grid: { display: false } } },
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ' Múltiplo Médio: ' + formatMultiple(ctx.raw) } } }
+                }
+            });
+        }
+
+        function createAllocationChart() {
+            createChart('allocationChart', {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pod Secular (35%)', 'Pod Global (35%)', 'Pod Selic (30%)'],
+                    datasets: [{
+                        data: [35, 35, 30],
+                        backgroundColor: [getPodColor('Pod Secular', 0.8), getPodColor('Pod Global', 0.8), getPodColor('Pod Selic', 0.8)],
+                        borderColor: [getPodColor('Pod Secular', 1), getPodColor('Pod Global', 1), getPodColor('Pod Selic', 1)],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '60%',
+                    plugins: { legend: { position: 'bottom', labels: { padding: 20 } }, tooltip: { callbacks: { label: (ctx) => ' ' + ctx.label } } }
+                }
+            });
+        }
+        
+        function createSectorChart() {
+            var activePods = ['Pod Secular', 'Pod Global', 'Pod Selic'];
+            var sectorCounts = companiesData
+                .filter(c => activePods.includes(c.pod))
+                .reduce(function(acc, c) {
+                    var sector = c.sector || 'Outros';
+                    acc[sector] = (acc[sector] || 0) + 1;
+                    return acc;
+                }, {});
+
+            createChart('sectorChart', {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(sectorCounts),
+                    datasets: [{
+                        data: Object.values(sectorCounts),
+                        backgroundColor: [
+                            'rgba(10, 132, 255, 0.8)',
+                            'rgba(48, 209, 88, 0.8)',
+                            'rgba(191, 90, 242, 0.8)',
+                            'rgba(255, 159, 10, 0.8)',
+                            'rgba(255, 69, 58, 0.8)',
+                            'rgba(175, 82, 222, 0.8)',
+                            'rgba(90, 200, 250, 0.8)',
+                            'rgba(255, 204, 0, 0.8)'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#1c1c1e'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { padding: 15 } } }
+                }
+            });
+        }
+        
+        /**
+         * Cria ou atualiza o gráfico de projeção de patrimônio
+         * Esta função é chamada tanto na inicialização quanto pelo simulador
+         */
+        function createWealthProjectionChart(simulationData) {
+            var labels = Array.from({length: 13}, (_, i) => 'Mês ' + i);
+            var datasets = [];
+            var defaultInvestment = parseFloat(document.getElementById('monthly-input').value) || 2500;
+
+            // Dataset 1: Projeção Padrão (Base) - Corrigida para Mês 0
+            var baseData = {
+                investment: defaultInvestment,
+                strategy: 'balanced',
+                tickers: new Set(COMPANIES_DATABASE.map(c => c.ticker))
+            };
+            var baseProjection = calculateProjection(baseData.tickers, baseData.investment, baseData.strategy);
+            datasets.push({
+                label: 'Projeção Balanceada (Todos Ativos)',
+                data: baseProjection.projection,
+                borderColor: 'rgba(142, 142, 147, 1)',
+                backgroundColor: 'rgba(142, 142, 147, 0.1)',
+                borderDash: [5, 5],
+                fill: false,
+                tension: 0.1
+            });
+
+            // Dataset 2: Projeção da Simulação Atual (se houver)
+            if (simulationData) {
+                var simProjection = calculateProjection(simulationData.tickers, simulationData.investment, simulationData.strategy);
+                datasets.push({
+                    label: 'Sua Simulação (' + simulationData.strategyLabel + ')',
+                    data: simProjection.projection,
+                    borderColor: 'rgba(10, 132, 255, 1)',
+                    backgroundColor: 'rgba(10, 132, 255, 0.2)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 3
+                });
+            }
+
+            createChart('wealthProjectionChart', {
+                type: 'line',
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        y: { title: { display: true, text: 'Patrimônio (R$)', color: '#f5f5f7' }, ticks: { callback: (val) => formatCurrency(val) } },
+                        x: { title: { display: true, text: 'Tempo (Meses)', color: '#f5f5f7' } }
+                    },
+                    plugins: { 
+                        tooltip: { mode: 'index', intersect: false, callbacks: { label: (ctx) => ' ' + ctx.dataset.label + ': ' + formatCurrency(ctx.raw) } },
+                        legend: { labels: { color: '#f5f5f7' } }
+                    }
+                }
+            });
+        }
+
+        /**
+         * Calcula a projeção de patrimônio mês a mês
+         * CORRIGIDO: Inicia no Mês 0 com o primeiro aporte
+         */
+        function calculateProjection(tickerSet, monthlyInvestment, strategy) {
+            var selectedCompanies = companiesData.filter(c => tickerSet.has(c.ticker));
+            if (selectedCompanies.length === 0) {
+                var zeroProjection = Array(13).fill(0);
+                if (monthlyInvestment > 0) {
+                    // Se não selecionou ações, o dinheiro apenas acumula sem render
+                    for(var k=0; k < 13; k++) { zeroProjection[k] = monthlyInvestment * (k+1); }
+                }
+                return { projection: zeroProjection, weightedMultiple: 0 };
+            }
+            
+            var allocation = calculateAllocation(selectedCompanies, monthlyInvestment, strategy);
+            var { finalWeightedMultiple } = calculateSummaryMetrics(allocation);
+
+            var avgMonthlyGrowth = 0;
+            if (finalWeightedMultiple > 0) {
+                avgMonthlyGrowth = Math.pow(finalWeightedMultiple, 1/12) - 1;
+            }
+
+            var projection = [];
+            var totalPatrimony = 0;
+            
+            // Mês 0: Primeiro aporte
+            totalPatrimony = monthlyInvestment;
+            projection.push(totalPatrimony);
+
+            for (var i = 1; i <= 12; i++) {
+                // 1. Crescimento do patrimônio existente
+                totalPatrimony = totalPatrimony * (1 + avgMonthlyGrowth);
+                // 2. Novo aporte (ocorre no início do mês, junto com o crescimento)
+                if(i < 12) { // Não adiciona aporte no final do Mês 12
+                   totalPatrimony += monthlyInvestment;
+                }
+                projection.push(totalPatrimony);
+            }
+            return { projection: projection, weightedMultiple: finalWeightedMultiple };
+        }
+
+        // ========================================================================
+        // FUNÇÕES DO SIMULADOR (SIMULATOR-VIEW)
+        // ========================================================================
+        function setupSimulator() {
+            populateStockChips();
+            
+            // RECALCULO AUTOMÁTICO (SEM BOTÃO)
+            document.getElementById('monthly-input').addEventListener('input', runSimulation);
+            document.getElementById('allocation-strategy').addEventListener('change', runSimulation);
+            document.getElementById('stock-chips').addEventListener('click', function(e) {
+                var chip = e.target.closest('.stock-chip');
+                if (chip && !chip.classList.contains('disabled')) {
+                    var ticker = chip.dataset.ticker;
+                    chip.classList.toggle('selected');
+                    if (chip.classList.contains('selected')) {
+                        simulationSelectedTickers.add(ticker);
+                    } else {
+                        simulationSelectedTickers.delete(ticker);
+                    }
+                    
+                    // Atualiza o checkbox correspondente na tabela principal
+                    var check = document.querySelector('.sim-select-check[data-ticker="' + ticker + '"]');
+                    if(check) check.checked = chip.classList.contains('selected');
+                    
+                    // Roda a simulação automaticamente
+                    runSimulation();
+                }
+            });
+
+            // Roda a simulação uma vez no início com os valores padrão
+            runSimulation();
+        }
+        
+        function populateStockChips() {
+            var container = document.getElementById('stock-chips');
+            // Ordena por Pod e depois por Múltiplo
+            var allStocks = companiesData.slice().sort((a, b) => {
+                if (a.pod < b.pod) return -1;
+                if (a.pod > b.pod) return 1;
+                return b.growthMultiple - a.growthMultiple;
+            });
+            
+            container.innerHTML = allStocks.map(function(c) {
+                var isSelected = simulationSelectedTickers.has(c.ticker);
+                var isDisabled = (c.pod === 'Pod Sell' || c.pod === 'Pod N/A');
+                
+                return '<div class="stock-chip ' + (isSelected ? 'selected' : '') + (isDisabled ? ' disabled' : '') + '" data-ticker="' + c.ticker + '">' +
+                           '<span>' + c.ticker + '</span>' +
+                           '<span class="stock-chip-badge" style="background-color:'+ getPodColor(c.pod, 0.4) +'; color: '+ getPodColor(c.pod, 1) +'">' + formatMultiple(c.growthMultiple) + '</span>' +
+                       '</div>';
+            }).join('');
+        }
+
+        /**
+         * Função central que recalcula e redesenha o simulador
+         */
+        function runSimulation() {
+            var monthlyInvestment = parseFloat(document.getElementById('monthly-input').value) || 0;
+            var strategySelect = document.getElementById('allocation-strategy');
+            var strategy = strategySelect.value;
+            var strategyLabel = strategySelect.options[strategySelect.selectedIndex].text;
+            
+            var selectedCompanies = companiesData.filter(c => simulationSelectedTickers.has(c.ticker));
+            
+            if (selectedCompanies.length === 0 || monthlyInvestment === 0) {
+                document.getElementById('allocation-results').style.display = 'none';
+                createWealthProjectionChart(null); // Limpa o gráfico de projeção
+                return;
+            }
+
+            var allocation = calculateAllocation(selectedCompanies, monthlyInvestment, strategy);
+            renderAllocationResults(allocation, monthlyInvestment, strategy);
+            
+            // Atualiza os gráficos com os novos dados da simulação
+            createAllocationPieChart(allocation);
+            createWealthProjectionChart({
+                tickers: simulationSelectedTickers,
+                investment: monthlyInvestment,
+                strategy: strategy,
+                strategyLabel: strategyLabel
+            });
+        }
+        
+        /**
+         * Calcula a alocação com base na estratégia
+         */
+        function calculateAllocation(selectedCompanies, monthlyInvestment, strategy) {
+            var allocation = [];
+            var totalWeight = 0;
+
+            if (strategy === 'conservative') {
+                // Conservadora: Peso igual para todas
+                totalWeight = selectedCompanies.length;
+                allocation = selectedCompanies.map(function(c) {
+                    var weight = 1 / totalWeight;
+                    return { company: c, weight: weight, amount: monthlyInvestment * weight };
+                });
+                
+            } else if (strategy === 'balanced') {
+                // Balanceada: Peso igual para os PODS
+                var pods = { 'Pod Secular': [], 'Pod Global': [], 'Pod Selic': [] };
+                selectedCompanies.forEach(function(c) {
+                    if (pods[c.pod]) pods[c.pod].push(c);
+                });
+                
+                var activePods = Object.values(pods).filter(p => p.length > 0);
+                if (activePods.length === 0) return calculateAllocation(selectedCompanies, monthlyInvestment, 'conservative'); // Fallback
+                
+                var moneyPerPod = monthlyInvestment / activePods.length;
+                var weightPerPod = 1 / activePods.length;
+                
+                activePods.forEach(function(podCompanies) {
+                    var moneyPerStock = moneyPerPod / podCompanies.length;
+                    var weightPerStock = weightPerPod / podCompanies.length;
+                    podCompanies.forEach(function(c) {
+                        allocation.push({ company: c, weight: weightPerStock, amount: moneyPerStock });
+                    });
+                });
+
+            } else if (strategy === 'aggressive') {
+                // Agressiva: Ponderada pelo Múltiplo de Crescimento
+                // Usamos (Múltiplo - 1) para ponderar pelo *upside*, não pelo valor total
+                totalWeight = selectedCompanies.reduce((sum, c) => sum + (c.growthMultiple > 1 ? c.growthMultiple - 1 : 0), 0);
+                if (totalWeight <= 0) return calculateAllocation(selectedCompanies, monthlyInvestment, 'conservative'); // Fallback
+                
+                allocation = selectedCompanies.map(function(c) {
+                    var upside = (c.growthMultiple > 1 ? c.growthMultiple - 1 : 0);
+                    var weight = upside / totalWeight;
+                    return { company: c, weight: weight, amount: monthlyInvestment * weight };
+                });
+            }
+
+            return allocation.sort((a,b) => b.amount - a.amount);
+        }
+        
+        /**
+         * Calcula as métricas de sumário (Múltiplo e ROE ponderados)
+         */
+        function calculateSummaryMetrics(allocation) {
+            var weightedMultiple = 0;
+            var weightedRoe = 0;
+            var totalWeight = 0; // Usar o peso da alocação
+
+            allocation.forEach(function(item) {
+                weightedMultiple += (item.company.growthMultiple || 0) * item.weight;
+                weightedRoe += (item.company.metrics.roe || 0) * item.weight;
+                totalWeight += item.weight;
+            });
+
+            var finalWeightedMultiple = (totalWeight > 0) ? (weightedMultiple / totalWeight) : 0;
+            var finalWeightedRoe = (totalWeight > 0) ? (weightedRoe / totalWeight) : 0;
+            
+            return { finalWeightedMultiple, finalWeightedRoe };
+        }
+
+        /**
+         * Renderiza a tabela e o sumário do simulador
+         */
+        function renderAllocationResults(allocation, monthlyInvestment, strategy) {
+            var summaryContainer = document.getElementById('allocation-summary');
+            var tableContainer = document.getElementById('allocation-table-container');
+            
+            var { finalWeightedMultiple, finalWeightedRoe } = calculateSummaryMetrics(allocation);
+
+            summaryContainer.innerHTML = `
+                <div class="result-item">
+                    <div class="result-label">Aporte Mensal</div>
+                    <div class="result-value">${formatCurrency(monthlyInvestment)}</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Ações Selecionadas</div>
+                    <div class="result-value">${allocation.length}</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Múltiplo Médio (Pond.)</div>
+                    <div class="result-value" style="color: var(--success);">${formatMultiple(finalWeightedMultiple)}</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">ROE Médio (Pond.)</div>
+                    <div class="result-value" style="color: var(--primary);">${formatPercentage(finalWeightedRoe)}</div>
+                </div>
+            `;
+            
+            tableContainer.innerHTML = `
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Ticker</th>
+                                <th>Alocação (R$)</th>
+                                <th>Alocação (%)</th>
+                                <th>Múltiplo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${allocation.map(item => `
+                                <tr>
+                                    <td><div class="cell-ticker">${item.company.ticker}</div></td>
+                                    <td><strong>${formatCurrency(item.amount)}</strong></td>
+                                    <td>${formatPercentage((item.amount / monthlyInvestment) * 100)}</td>
+                                    <td class="cell-multiple">${formatMultiple(item.company.growthMultiple)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById('allocation-results').style.display = 'block';
+        }
+
+        /**
+         * NOVO: Cria o gráfico de rosca para a alocação
+         */
+        function createAllocationPieChart(allocation) {
+            createChart('allocationPieChart', {
+                type: 'doughnut',
+                data: {
+                    labels: allocation.map(item => item.company.ticker),
+                    datasets: [{
+                        data: allocation.map(item => item.amount),
+                        backgroundColor: allocation.map(item => getPodColor(item.company.pod, 0.8)),
+                        borderColor: allocation.map(item => getPodColor(item.company.pod, 1)),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '60%',
+                    plugins: { 
+                        legend: { display: false }, 
+                        tooltip: { callbacks: { 
+                            label: (ctx) => ' ' + ctx.label + ': ' + formatCurrency(ctx.raw)
+                        } } 
+                    }
+                }
+            });
+        }
+
+        // ========================================================================
+        // FUNÇÕES UTILITÁRIAS GLOBAIS
+        // ========================================================================
+        function getNestedProperty(obj, path) {
+            if (!obj) return null;
+            if (path.startsWith('metrics.')) {
+                return obj.metrics ? obj.metrics[path.split('.')[1]] : null;
+            }
+            return obj[path] || null;
+        }
+        
+        function formatCurrency(value) {
+            if (value === null || value === undefined || isNaN(value)) return 'R$ -';
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+        }
+        
+        function formatPercentage(value, decimals = 1) {
+            if (value === null || value === undefined || isNaN(value)) return '- %';
+            return value.toFixed(decimals) + '%';
+        }
+
+        function formatMultiple(value) {
+            if (value === null || value === undefined || isNaN(value) || value <= 0) return '-';
+            return value.toFixed(2) + 'x';
+        }
+        
+        function getRecommendationClass(recommendation) {
+            if (!recommendation) return '';
+            return 'rec-' + recommendation.toLowerCase().replace(' ', '-');
+        }
+
+        function getPodClass(pod) {
+            if (!pod) return 'pod-na';
+            return 'pod-' + pod.split(' ')[1].toLowerCase();
+        }
+        
+        function getPodColor(pod, opacity = 1) {
+            switch(pod) {
+                case 'Pod Secular': return 'rgba(191, 90, 242, ' + opacity + ')';
+                case 'Pod Global': return 'rgba(48, 209, 88, ' + opacity + ')';
+                case 'Pod Selic': return 'rgba(10, 132, 255, ' + opacity + ')';
+                case 'Pod Sell': return 'rgba(255, 69, 58, ' + opacity + ')';
+                default: return 'rgba(142, 142, 147, ' + opacity + ')';
+            }
+        }
+        
+        function getSourceClass(source) {
+            if (!source) return 'source-v1';
+            return 'source-' + source.toLowerCase().replace('+', '-');
+        }
+
+    </script>
+</body>
+</html>
